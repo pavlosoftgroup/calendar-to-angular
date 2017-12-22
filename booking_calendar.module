@@ -1,0 +1,167 @@
+<?php
+/**
+ * @file
+ * A description of what your module does.
+ */
+//  drupal_add_js(libraries_get_path('node_modules') . '/@angular/forms/bundles/forms.umd.js');
+drupal_add_css('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css');
+function booking_calendar_init() {
+
+
+}
+
+function booking_calendar_menu() {
+  $items = [];
+  $items['booking_calendar'] = [
+    'access callback' => TRUE,
+    'page callback' => 'booking_calendar_callback',
+  ];
+  $items['booking_calendar/delete/%'] = [
+    'page callback' => 'booking_calendar_delete_user_ajax_callback',
+    'page arguments' => [2],
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+  $items['booking_calendar/rename/%/%'] = [
+    'page callback' => 'booking_calendar_rename_user_ajax_callback',
+    'page arguments' => [2, 3],
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['booking-calendar-api/%/%/%/%'] = [
+    'page callback' => 'booking_calendar_get_api_callback',
+    'page arguments' => [1, 2, 3, 4],
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_ACTION,
+  ];
+  return $items;
+}
+
+function booking_calendar_get_api_callback($interval, $day, $mount, $year) {
+
+  $linuxDate = mktime(0, 0, 0, $mount, $day, $year);
+
+  $date_interval = _get_event_interval($interval, $linuxDate);
+
+
+  $nodes = db_select('node', 'nd')
+    ->fields('nd', ['nid'])
+    ->condition('nd.status', 1)
+    ->execute()
+    ->fetchAll();
+
+  var_dump($date_interval);
+
+  return 'dsfgdfg';
+
+}
+
+function booking_calendar_rename_user_ajax_callback($userId, $newName) {
+
+  if ($userId != 1) {
+
+
+    $user = user_load($userId);
+    $user->name = $newName;
+    $user = user_save($user);
+    return '1';
+  }
+
+}
+
+function booking_calendar_delete_user_ajax_callback($userId) {
+  if ($userId != 1) {
+    $user = user_load($userId);
+    $user->name = 'User-' . $userId;
+    $user = user_save($user);
+    return '1';
+  }
+
+
+}
+
+function booking_calendar_callback() {
+  $build = [];
+  //  global $user;
+  //  $users = entity_load('user');
+  //  dpm($users);
+  //  drupal_add_js(array('booking_calendar' => $user), 'setting');
+  //  drupal_add_js(array('users' => $users), 'setting');
+
+
+  $build['content'] = [
+    '#theme' => [
+      'booking_calendar_component',
+    ],
+    '#attached' => [
+      'js' => [
+        libraries_get_path('node_modules') . '/core-js/client/shim.min.js',
+        libraries_get_path('node_modules') . '/zone.js/dist/zone.js',
+        libraries_get_path('node_modules') . '/reflect-metadata/Reflect.js',
+        libraries_get_path('node_modules') . '/rxjs/bundles/Rx.js',
+        libraries_get_path('node_modules') . '/@angular/core/bundles/core.umd.js',
+        libraries_get_path('node_modules') . '/@angular/forms/bundles/forms.umd.js',
+        libraries_get_path('node_modules') . '/@angular/common/bundles/common.umd.js',
+        libraries_get_path('node_modules') . '/@angular/compiler/bundles/compiler.umd.js',
+        libraries_get_path('node_modules') . '/@angular/platform-browser/bundles/platform-browser.umd.js',
+        libraries_get_path('node_modules') . '/@angular/platform-browser-dynamic/bundles/platform-browser-dynamic.umd.js',
+        drupal_get_path('module', 'booking_calendar') . '/booking_calendar.component.js',
+        drupal_get_path('module', 'booking_calendar') . '/booking_calendar.module.js',
+        drupal_get_path('module', 'booking_calendar') . '/booking_calendar.main.js',
+      ],
+    ],
+  ];
+  return $build;
+}
+
+function booking_calendar_theme($existing, $type, $theme, $path) {
+  return [
+    'booking_calendar_component' => [
+      'template' => 'booking-calendar-component',
+      'variables' => [],
+      'path' => drupal_get_path('module', 'booking_calendar') . '/theme',
+    ],
+  ];
+}
+
+
+function _get_event_interval($interval, $linuxDate) {
+
+  switch ($interval) {
+
+    case 'mount':
+
+      $startTime = date("d.m.Y-G:i", strtotime("first day of " . date('F', $linuxDate) . " " . date('Y', $linuxDate)));
+      $last_day = date("U", strtotime("last day of " . date('F', $linuxDate) . " " . date('Y', $linuxDate)));
+      $linuxTime_lastTime = mktime(23, 59, 59, date('n', $last_day), date('j', $last_day), date('Y', $last_day));
+      $stopTime = date("d.m.Y-G:i", $linuxTime_lastTime);
+
+      break;
+
+    case 'week':
+
+      $startTime = date("d.m.Y-G:i", strtotime("Monday this week", $linuxDate));
+      $last_day = date("U", strtotime("Sunday this week", $linuxDate));
+      $linuxTime_lastTime = mktime(23, 59, 59, date('n', $last_day), date('j', $last_day), date('Y', $last_day));
+      $stopTime = date("d.m.Y-G:i", $linuxTime_lastTime);
+
+      break;
+
+    case 'day':
+      $startTime = date("d.m.Y-G:i", $linuxDate);
+      $linuxTime_lastTime = mktime(23, 59, 59, date('n', $linuxDate), date('j', $linuxDate), date('Y', $linuxDate));
+      $stopTime = date("d.m.Y-G:i", $linuxTime_lastTime);
+
+      break;
+  };
+
+  $output = [
+    'start' => $startTime,
+    'end' => $stopTime,
+  ];
+
+  return $output;
+
+
+}
